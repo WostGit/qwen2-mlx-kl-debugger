@@ -1,0 +1,7 @@
+.venv/
+__pycache__/
+*.pyc
+results/*.csv
+results/*.png
+results/debug/*.jsonl
+results/debug/*.csv
