@@ -1,0 +1,52 @@
+name: qwen2-mlx-kl-debugger
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["**"]
+
+jobs:
+  run-experiments:
+    runs-on: macos-14
+    timeout-minutes: 120
+    env:
+      HF_HOME: ${{ github.workspace }}/.cache/huggingface
+      HUGGINGFACE_HUB_CACHE: ${{ github.workspace }}/.cache/huggingface/hub
+      PYTHONUNBUFFERED: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Cache Hugging Face model + pip
+        uses: actions/cache@v4
+        with:
+          path: |
+            .cache/huggingface
+            ~/Library/Caches/pip
+          key: ${{ runner.os }}-hf-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-hf-pip-
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run toy + Qwen MLX experiments
+        run: |
+          python scripts/run_experiments.py --run-qwen --debug-llm --out-dir results
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: qwen2-mlx-kl-debugger-results
+          path: |
+            results/*.csv
+            results/*.png
+            results/debug/*.jsonl
+            results/debug/*.csv
+          if-no-files-found: error
