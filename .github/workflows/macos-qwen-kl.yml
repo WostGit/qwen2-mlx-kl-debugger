@@ -1,0 +1,56 @@
+name: macOS Qwen KL Debugger
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  run-experiments:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/Library/Caches/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+
+      - name: Cache Hugging Face
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/huggingface
+          key: ${{ runner.os }}-hf-${{ hashFiles('requirements.txt') }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run toy baseline
+        run: |
+          python scripts/run_experiments.py --family toy --output-dir results --debug-llm
+
+      - name: Run Qwen MLX experiments
+        run: |
+          python scripts/run_experiments.py --family qwen --output-dir results --debug-llm --qwen-model Qwen/Qwen2-0.5B-Instruct
+
+      - name: Plot
+        run: |
+          python scripts/plot_results.py --summary results/results_summary.csv --output-dir results
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: qwen2-mlx-kl-debugger-results
+          path: |
+            results/*.csv
+            results/*.jsonl
+            results/*.png
